@@ -30,45 +30,36 @@ effect of raw thickness from the effect of taper and shape.
 
 ---
 
-## Quick start
+## Setup
+
+Three commands:
 
 ```bash
+git clone https://github.com/HY09-26/Carbon-Fiber-Insertion-Simulation.git
+cd Carbon-Fiber-Insertion-Simulation
 bash setup.sh
 ```
 
-That is the whole setup. It creates the environment in `./.venv`, installs
-everything, registers a `Python (cf_v2)` Jupyter kernel and writes
-`.vscode/settings.json` - no paths to edit. conda is used if it is on your
-PATH, otherwise it falls back to pip.
+`setup.sh` does the rest: it builds the environment in `./.venv`, installs
+every dependency, registers a `Python (cf_v2)` Jupyter kernel and writes
+`.vscode/settings.json`. There is nothing to edit afterwards. conda is used
+when it is on your PATH, pip otherwise. Re-running it is safe.
 
-Then put the raw data in `mouse_data/` (see [Getting the data](#getting-the-data)),
-open `All_Simulation.ipynb`, pick the **Python (cf_v2)** kernel, and run it top
-to bottom.
+You need Python 3.10 or newer. The install is on the order of 1-2 GB, most of
+it VTK.
 
----
+Then:
 
-## Requirements
+1. Put the tif stacks into `mouse_data/`. The raw data (ten stacks, ~14 GB) is
+   not distributed with this repository; ask the authors for it.
+2. Open `All_Simulation.ipynb`.
+3. Choose the **Python (cf_v2)** kernel (top right in VS Code).
+4. Run all cells.
 
+<details>
+<summary><b>Options, manual install, Windows</b></summary>
 
-### Software
-
-Python 3.10 or newer. Dependencies are declared three ways, pick one:
-
-| File | Use it when |
-|---|---|
-| `environment.yml` | **Recommended.** conda-forge ships prebuilt VTK binaries for macOS (arm64 + x86_64), Linux and Windows, so pyvista installs cleanly. |
-| `requirements.txt` | No conda available. Version floors only, so it stays portable. |
-| `requirements-lock.txt` | You want to reproduce the published numbers against the exact versions they were computed with. |
-
-`tkinter` (used only by `UI.py`) ships with CPython. On some Linux
-distributions it is a separate system package, e.g. `apt install python3-tk`.
-
----
-
-## Setting up the environment
-
-`bash setup.sh` does everything in this section. Read on only if you want to
-do it by hand, or you are on Windows.
+### setup.sh options
 
 | Command | Effect |
 |---|---|
@@ -76,13 +67,19 @@ do it by hand, or you are on Windows.
 | `bash setup.sh --pip` | force pip + venv even when conda is installed |
 | `bash setup.sh --exact` | pin every version from `requirements-lock.txt` |
 
-Re-running is safe: an existing `./.venv` is reused, and an existing
-`.vscode/settings.json` is never overwritten.
+An existing `./.venv` is reused and an existing `.vscode/settings.json` is
+never overwritten, so re-running only fills in what is missing.
 
-The environment **must** live at `./.venv`, because
-`.vscode/settings.json.example` points `python.defaultInterpreterPath` at
-`${workspaceFolder}/.venv/bin/python`. That is what makes the VS Code settings
-work on any machine without editing.
+### Which dependency file does what
+
+| File | Use it when |
+|---|---|
+| `environment.yml` | **Default.** conda-forge ships prebuilt VTK binaries for macOS (arm64 + x86_64), Linux and Windows, so pyvista installs cleanly. |
+| `requirements.txt` | No conda available. Version floors only, so it stays portable. |
+| `requirements-lock.txt` | You want to reproduce the published numbers against the exact versions they were computed with. |
+
+`tkinter` (used only by `UI.py`) ships with CPython. On some Linux
+distributions it is a separate system package, e.g. `apt install python3-tk`.
 
 ### By hand (macOS / Linux)
 
@@ -108,18 +105,24 @@ copy .vscode\settings.json.example .vscode\settings.json
 Then edit `.vscode/settings.json` and change `bin/python` to
 `Scripts/python.exe`.
 
-### Notes
+### Why the environment must be at ./.venv
 
-`.vscode/settings.json` is gitignored; `.vscode/settings.json.example` is the
-version under version control.
+`.vscode/settings.json.example` points `python.defaultInterpreterPath` at
+`${workspaceFolder}/.venv/bin/python`. Keeping the environment inside the
+project is what lets those VS Code settings work on any machine unedited.
+
+`.vscode/settings.json` itself is gitignored; the tracked template is
+`.vscode/settings.json.example`.
 
 `jupyter.notebookFileRoot` is set to `${fileDirname}` because cell 0 of each
 notebook resolves `mouse_data` relative to the working directory, so a
-notebook must run from this folder.
+notebook must run from its own folder.
 
 If your machine has other Python installations that advertise themselves as
 kernels, list them under `jupyter.kernels.filter` to keep them out of the
 kernel picker. Entries that do not exist on your machine are ignored.
+
+</details>
 
 ---
 
@@ -264,7 +267,7 @@ from `Volume_bleeding` so the algorithm lives in one place. Import
 
 ### `UI.py`
 
-Tkinter GUI described under [Running the pipeline](#3-uipy--single-insertion-interactive).
+Tkinter GUI described under [Running the pipeline](#running-the-pipeline).
 It inlines its own copy of the crop logic instead of calling `cropping_img`;
 there is a `TODO` on that line.
 
