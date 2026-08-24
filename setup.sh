@@ -103,7 +103,8 @@ if missing:
     sys.exit(f"\nSetup incomplete, missing: {', '.join(missing)}")
 n = len(os.listdir("mouse_data")) if os.path.isdir("mouse_data") else 0
 print(f"\n    mouse_data/: {n} files"
-      + ("" if n else "  <- empty; see README.md, 'Getting the data'"))
+      + ("" if n else "  <- empty; the raw tif stacks are not in the repo,"
+                      " ask the authors"))
 PYEOF
 
 cat <<'EOF'
@@ -112,5 +113,5 @@ Done.
 
   Notebook   open All_Simulation.ipynb and pick the kernel "Python (cf_v2)"
   Shell      ./.venv/bin/python UI.py
-  Data       put the tif stacks in mouse_data/ (see README.md)
+  Data       put the tif stacks in mouse_data/ (~14 GB, not in the repo)
 EOF

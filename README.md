@@ -45,8 +45,8 @@ every dependency, registers a `Python (cf_v2)` Jupyter kernel and writes
 `.vscode/settings.json`. There is nothing to edit afterwards. conda is used
 when it is on your PATH, pip otherwise. Re-running it is safe.
 
-You need Python 3.10 or newer. The install is on the order of 1-2 GB, most of
-it VTK.
+You need Python 3.10 or newer. The environment takes about 2.3 GB of disk,
+most of it VTK.
 
 Then:
 

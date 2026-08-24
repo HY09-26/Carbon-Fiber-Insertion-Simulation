@@ -12,20 +12,23 @@
 # All_Simulation.ipynb imports it at the top, so it is required as written.
 
 # --- core numerics ---
-numpy>=1.24
-scipy>=1.13            # ndimage.label, ndimage.sum, spatial.cKDTree
-pandas>=2.0
+numpy>=1.24,<3
+scipy>=1.13,<2         # ndimage.label, ndimage.sum, spatial.cKDTree
+pandas>=2.0,<3         # 3.0 is a breaking release
 
 # --- image IO ---
 tifffile>=2024.1.1     # reads the 1.5 GB 3-D tif stacks in mouse_data/
 Pillow>=10.0           # re-saves the rendered figures at 300 dpi
 
 # --- 3-D rendering ---
-pyvista>=0.44          # depends on vtk
+# Pinned to a series: pyvista 0.44 against VTK 9.7 fails at import with
+# "cannot import name vtkCapsuleSource". Keep pyvista and vtk in step.
+pyvista~=0.45.0
+vtk~=9.4.0
 
 # --- misc ---
 tqdm>=4.66
-matplotlib>=3.8
+matplotlib>=3.8,<4
 
 # --- required to run the notebooks ---
 ipykernel>=6.29
