@@ -148,7 +148,10 @@ def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_bas
     scalar_field[(img_data == 1) & (inside_cone_mask)] = 2  # Inside cone
 
     # --- Create PyVista volume ---
-    plotter = pv.Plotter()
+    # off_screen is required when ui == 0: the caller then never calls show(),
+    # and from PyVista 0.45 screenshot() no longer renders implicitly, so an
+    # on-screen plotter would raise "Nothing to screenshot".
+    plotter = pv.Plotter(off_screen=(ui != 1))
     grid = pv.ImageData()
     grid.dimensions = scalar_field.shape
     grid.spacing = (1, 1, 1)                 # 1 um per voxel
