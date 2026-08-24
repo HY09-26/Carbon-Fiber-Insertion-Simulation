@@ -19,13 +19,8 @@ Geometry, axis order and units are identical to `Volume_bleeding.py`; see
 that module's docstring for the (depth, height, width) = (z, x, y)
 convention and the 1 um isotropic sampling.
 
-NOTE on interpretation: in these volumes the vasculature is one connected
-network, and it is also connected to the block of 1s that fills the space
-above the cortical surface.  Measured on "Reslice of 0", a single label
-holds 98 % of all foreground voxels, so almost every insertion touches it.
-The count is therefore better read as "1 (the main vascular tree) + number
-of small disconnected fragments" than as "number of vessels severed".  See
-README.md, "Known issues".
+The count is over connected components of the segmentation, so the reading
+depends on how the segmentation is connected.
 """
 
 import numpy as np
@@ -37,10 +32,10 @@ import pyvista as pv
 from tqdm import tqdm
 
 # Imported for convenience so callers can pull everything from this module.
-# CAUTION: `calculate_cone_radius` and `find_first_black_pixel_slice` are
-# re-defined further down; the local definitions are the ones that take
-# effect. The local `find_first_black_pixel_slice` returns 0 instead of None
-# when a column never reaches background, which is the only difference.
+# `calculate_cone_radius` and `find_first_black_pixel_slice` are re-defined
+# further down; those local definitions are the ones that take effect. The
+# local `find_first_black_pixel_slice` returns 0 instead of None when a column
+# never reaches background, which is the only difference.
 from model_3D_visualization import visualize_cone_pyvista, calculate_cone_radius, cropping_img
 from Volume_bleeding import simulate_cone_insertion, find_first_black_pixel_slice, process_cone_positions
 

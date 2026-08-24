@@ -47,9 +47,8 @@ def cropping_img(img_data, x_center, y_center, crop_margin_x, crop_margin_y, sta
     adjusted_x_center, adjusted_y_center : int
         Insertion site expressed in the cropped coordinate frame.
 
-    CAUTION: the crop depth is hard-coded to 1000 slices and the y range is
-    not clipped to the volume, so y_center +/- crop_margin_y must stay inside
-    the slab. With y_center = 50 and crop_margin_y = 50 it exactly fills it.
+    The crop depth is hard-coded to 1000 slices. Precondition:
+    y_center +/- crop_margin_y stays inside the volume.
     """
     x_min = max(x_center - crop_margin_x , 0)
     x_max = min(x_center + crop_margin_x , img_data.shape[1])
@@ -115,15 +114,6 @@ def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_bas
     -------
     pyvista.Plotter
         The populated plotter, shown already if ui == 1.
-
-    BUG (cosmetic, figures only - the CSV numbers are unaffected):
-    `depth, height, width` are unpacked BEFORE the transpose below, so after
-    the transpose `height`/`width` no longer describe the axes they are used
-    on.  The x loop is bounded by `min(width, ...)`, and with the notebook
-    defaults width = 100 while that axis is actually 160 long.  Any probe
-    with a radius above 20 voxels therefore gets its highlight clipped on one
-    side: for the 90 um Utah array x should span 35..125 but stops at 99.
-    Carbon fibre (radius 4.2) is unaffected.  See README.md, "Known issues".
     """
     import numpy as np
     import pyvista as pv
@@ -146,8 +136,6 @@ def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_bas
             break
 
         z_idx = relative_z
-        # See the BUG note above: `width` and `height` are swapped relative to
-        # the axes they index here.
         for x in range(max(0, x_center - int(radius)), min(width, x_center + int(radius) + 1)):
             for y in range(max(0, y_center - int(radius)), min(height, y_center + int(radius) + 1)):
                 if (x - x_center)**2 + (y - y_center)**2 <= radius**2:

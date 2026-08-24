@@ -23,8 +23,7 @@ Two damage metrics are computed:
 
 - **Volume** - number of vessel *voxels* swept by the probe body.
 - **Number** - number of distinct *connected components* of the segmented
-  vasculature the probe touches. See [Known issues](#known-issues) for how to
-  read this one.
+  vasculature the probe touches.
 
 A control sweep of plain cylinders (diameter 4-80 um, step 4) separates the
 effect of raw thickness from the effect of taper and shape.
@@ -200,7 +199,8 @@ seg_cache/
 been checked against the current raw tifs: the only difference is 2,621
 single-voxel components dropped by the `min_size=2` filter.
 
-All output folders are gitignored.
+`seg_cache/` and `output_images/` are gitignored; the result CSVs in
+`output_csv/` and the two `*_bleeding_per_diameter/` folders are tracked.
 
 ---
 
@@ -267,102 +267,6 @@ from `Volume_bleeding` so the algorithm lives in one place. Import
 Tkinter GUI described under [Running the pipeline](#3-uipy--single-insertion-interactive).
 It inlines its own copy of the crop logic instead of calling `cropping_img`;
 there is a `TODO` on that line.
-
----
-
-## Known issues
-
-These were found by reading and instrumenting the code against the real data.
-None of them have been fixed - behaviour is unchanged - so treat this as the
-list of things to decide on before publication.
-
-### 1. Space above the cortical surface is counted as vessel
-
-`find_first_black_pixel_slice` inspects only the **central** column. Because
-the surface is tilted, columns at the rim of a wide probe can still be above
-the surface at that depth, and above-surface voxels are stored as 1. They are
-therefore counted as vascular damage, and **the bias grows with probe radius**.
-
-Measured by recomputing each column against its own surface depth:
-
-| Probe | Reslice of 0 | Reslice of 8 |
-|---|---|---|
-| Carbon Fiber 8.4um | 2.2 % | 6.6 % |
-| Paradromics 20um | 4.2 % | 12.4 % |
-| Microprobes 25um | 4.6 % | 13.5 % |
-| Neuralink 25um | 4.5 % | 13.2 % |
-| **Blackrock UEA 90um** | **18.5 %** | **36.1 %** |
-
-Effect on the headline number, UEA-to-carbon-fibre ratio:
-
-| | as computed | surface-corrected |
-|---|---|---|
-| Reslice of 0 | 78.7x | 65.6x |
-| Reslice of 8 | 118.7x | 81.2x |
-
-The conclusion survives, but the effect size is inflated by 20-30 %, and the
-bias runs in the same direction as the conclusion - a reviewer will ask.
-
-**Fix**: precompute a per-column surface map once
-(`np.argmax(img == 0, axis=0)`, about 6 s per volume) and count only voxels at
-`z >= surface[x, y]`.
-
-### 2. The count metric does not count vessels
-
-The vasculature is one connected network, and it is connected to the
-above-surface block, so they collapse into a single component. On
-"Reslice of 0": 41,375 components, but **one label holds 98.3 % of all
-foreground voxels**.
-
-| Probe | Mean labels touched | Excluding the giant one | Median size of the rest |
-|---|---|---|---|
-| Carbon Fiber 8.4um | 2.06 | 1.07 | 1,442 voxels |
-| Blackrock UEA 90um | 25.63 | 24.63 | 14 voxels |
-
-The giant component is touched by ~100 % of insertions. What is left is mostly
-small fragments - for the UEA, a median of 14 voxels, i.e. segmentation
-debris. So the metric reads as "1 (the main vascular tree) + fragments
-touched", not "vessels severed". `merge_labels` was written to address this
-but cannot run at this scale.
-
-### 3. Clipped highlight in the 3-D figures (cosmetic)
-
-In `visualize_cone_pyvista`, `depth, height, width` are unpacked **before**
-the transpose, so afterwards they no longer describe the axes they index. The
-x loop is bounded by `min(width, ...)` where `width = 100`, while that axis is
-actually 160 long.
-
-Any probe with radius above 20 voxels gets its red highlight clipped on one
-side: for the UEA, x should span 35..125 but stops at 99. Carbon fibre
-(radius 4.2) is unaffected. **CSV numbers are not affected** - only the
-figures in `output_images/`.
-
-### 4. Statistics
-
-The five probes are simulated on the **same** animals at the **same**
-insertion sites, so the samples are paired. Historical analysis used an
-independent two-sample t-test. On the per-animal means:
-
-| Test | p (carbon fibre vs UEA) |
-|---|---|
-| Independent two-sample | 1.4e-7 |
-| Paired | 1.5e-5 |
-| Paired on log10 | 1.2e-14 |
-
-The values span two orders of magnitude, so a log transform before the paired
-test is the appropriate choice.
-
-Separately, the 100 insertion sites are 49 um apart in a single slab and are
-spatially correlated. Treating them as n = 100 independent samples is
-pseudo-replication - aggregate to one value per animal first (n = 8).
-
-### 5. Missing bounds check
-
-`Volume_bleeding.simulate_cone_insertion` does not guard against `z` running
-past the end of the volume; `Number_bleeding.simulate_cone_insertion_num`
-does. With this dataset the deepest surface is 1698 and the insertion depth is
-1000, so 2698 < 3000 and it never triggers. It would break on a shallower
-volume or a longer probe.
 
 ---
 

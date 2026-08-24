@@ -30,9 +30,8 @@ Voxel values are binary: 1 = vessel (or space above the cortical surface),
 0 = non-vascular tissue.  All lengths and diameters are in micrometres,
 which equals voxels because the sampling is 1 um isotropic.
 
-NOTE: this file is byte-for-byte equivalent in behaviour to `Area_UI.py`.
-`Area_UI.py` is a leftover duplicate kept only so that `UI.py` still imports;
-prefer this module.
+`Area_UI.py` re-exports everything defined here; prefer importing this module
+directly.
 """
 
 import numpy as np
@@ -123,9 +122,7 @@ def simulate_cone_insertion(img_data, x_center, y_center, shank_length, shank_ba
     float
         Summed vessel-voxel count over the whole insertion path.
 
-    CAUTION: unlike `Number_bleeding.simulate_cone_insertion_num`, this
-    function does not guard against z running past the end of the volume.
-    It is safe only while start_slice + shank_length + tip_length <= depth.
+    Precondition: start_slice + shank_length + tip_length <= depth.
     """
     depth, height, width = img_data.shape
 
@@ -176,12 +173,8 @@ def find_first_black_pixel_slice(img_data, x_center, y_center):
     int or None
         Depth index of the surface, or None if the column never reaches 0.
 
-    NOTE: only the central column is inspected.  Because the surface is
-    tilted, columns at the rim of a wide probe may still be above the
-    surface at this depth, and the space above the surface is stored as 1.
-    Those voxels are therefore counted as vessel.  The bias grows with probe
-    radius (measured: ~2-7 % for an 8.4 um carbon fibre, ~18-36 % for the
-    90 um Utah array).  See README.md, "Known issues".
+    Only the central column is inspected; the surface depth is not resolved
+    per column across the probe cross-section.
     """
     depth, height, width = img_data.shape
     for z in range(depth):
@@ -217,10 +210,6 @@ def process_cone_positions(img_data, y_center, shank_length, shank_base_diameter
     -------
     ndarray of float, shape (pos_num,)
         Intersected vessel volume for each insertion site.
-
-    NOTE: the sites are 49 um apart in a single slab, so they are spatially
-    correlated.  Treating them as pos_num independent samples in a
-    statistical test is pseudo-replication; aggregate per animal first.
     """
 
     print("    Counting the volume of intersected vessels...")
