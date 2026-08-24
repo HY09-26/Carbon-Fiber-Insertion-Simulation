@@ -1,0 +1,25 @@
+# Raw data: ten 1.5 GB tif stacks (~14 GB total). Not distributable via git.
+# See README.md, "Getting the data".
+mouse_data/
+
+# Derived, regenerable from mouse_data/
+# seg_cache: ~122 MB of cached connected-component labellings
+# output_images: ~92 MB of 3-D renders
+seg_cache/
+output_images/
+
+# The result CSVs (output_csv/, *_bleeding_per_diameter/) are small
+# (~390 KB total) and are deliberately NOT ignored, so the numbers behind
+# the figures stay under version control.
+
+# Environment
+.venv/
+
+# Machine-specific; the tracked template is .vscode/settings.json.example
+.vscode/settings.json
+
+# OS / Python noise
+.DS_Store
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

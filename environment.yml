@@ -1,0 +1,32 @@
+# Conda environment for the CF_v2 electrode-insertion simulation.
+#
+#     conda env create -f environment.yml
+#     conda activate cf_v2
+#     python -m ipykernel install --user --name cf_v2 --display-name "Python (cf_v2)"
+#
+# Conda is the recommended route because pyvista pulls in VTK, which is a
+# large compiled dependency that conda-forge ships as a prebuilt binary for
+# macOS (arm64 and x86_64), Linux and Windows. `pip install -r
+# requirements.txt` also works and is the fallback if conda is unavailable.
+name: cf_v2
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  # --- core numerics ---
+  - numpy>=1.24
+  - scipy>=1.13          # ndimage.label, ndimage.sum, spatial.cKDTree
+  - pandas>=2.0
+  # --- image IO ---
+  - tifffile>=2024.1.1   # reads the 1.5 GB 3-D tif stacks
+  - pillow>=10.0         # re-saves rendered figures at 300 dpi
+  # --- 3-D rendering ---
+  - pyvista>=0.44
+  - vtk>=9.3
+  # --- misc ---
+  - matplotlib>=3.8
+  - tqdm>=4.66
+  # --- to run the notebooks ---
+  - ipykernel>=6.29
+  - jupyterlab>=4.0
+  - notebook>=7.0

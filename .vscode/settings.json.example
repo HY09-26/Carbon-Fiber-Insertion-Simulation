@@ -1,0 +1,34 @@
+{
+  // Copied to .vscode/settings.json by setup.sh. No editing required:
+  // setup.sh always creates the environment at <project>/.venv, so the
+  // interpreter path below resolves correctly on any machine.
+  //
+  // On Windows change "bin/python" to "Scripts/python.exe".
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+
+  // Run each notebook with its own folder as the working directory, so the
+  // relative 'mouse_data' path in cell 0 resolves.
+  "jupyter.notebookFileRoot": "${fileDirname}",
+
+  // Optional. If your machine has other Python installations that advertise
+  // themselves as kernels but lack pyvista (a second conda install, a system
+  // framework Python, ...), list them here to keep them out of the kernel
+  // picker. Entries that do not exist on your machine are ignored.
+  "jupyter.kernels.filter": [
+    // { "path": "/opt/anaconda3/bin/python", "type": "pythonEnvironment" }
+  ],
+
+  // mouse_data is ~14 GB. Keep it out of the file watcher and search index.
+  "files.watcherExclude": {
+    "**/mouse_data/**": true,
+    "**/seg_cache/**": true,
+    "**/output_images/**": true,
+    "**/.venv/**": true
+  },
+  "search.exclude": {
+    "**/mouse_data": true,
+    "**/seg_cache": true,
+    "**/output_images": true,
+    "**/.venv": true
+  }
+}

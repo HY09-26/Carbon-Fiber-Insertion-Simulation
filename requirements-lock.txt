@@ -1,0 +1,21 @@
+# Exact versions this pipeline was last verified against.
+# Use this file to reproduce the published numbers bit-for-bit; use
+# requirements.txt (version floors) or environment.yml for normal use.
+#
+#     pip install -r requirements-lock.txt
+#
+# Verified: 2026-08-24, CPython 3.12.9, macOS 15 arm64 (Apple silicon).
+# Everything below is pure-Python or has prebuilt wheels for macOS arm64,
+# macOS x86_64, manylinux and Windows.
+numpy==2.2.6
+scipy==1.15.3
+pandas==2.2.3
+tifffile==2025.5.21
+Pillow==11.2.1
+pyvista==0.45.2
+vtk==9.4.2
+matplotlib==3.10.3
+tqdm==4.67.1
+ipykernel==6.29.5
+notebook==7.6.2
+jupyterlab==4.6.3

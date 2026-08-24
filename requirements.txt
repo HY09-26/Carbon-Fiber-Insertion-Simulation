@@ -1,0 +1,39 @@
+# CF_v2 - electrode insertion / vascular damage simulation
+#
+# Python 3.10 or newer. Verified on CPython 3.12.9 (macOS arm64, miniconda base).
+#
+#   pip install -r requirements.txt
+#
+# tkinter (used by UI.py) ships with CPython and is not listed here. On some
+# Linux distributions it is a separate system package (e.g. python3-tk).
+#
+# pyvista pulls in VTK (~100 MB) for the 3-D rendering in
+# model_3D_visualization.py. The CSV metrics themselves do not need it, but
+# All_Simulation.ipynb imports it at the top, so it is required as written.
+
+# --- core numerics ---
+numpy>=1.24
+scipy>=1.13            # ndimage.label, ndimage.sum, spatial.cKDTree
+pandas>=2.0
+
+# --- image IO ---
+tifffile>=2024.1.1     # reads the 1.5 GB 3-D tif stacks in mouse_data/
+Pillow>=10.0           # re-saves the rendered figures at 300 dpi
+
+# --- 3-D rendering ---
+pyvista>=0.44          # depends on vtk
+
+# --- misc ---
+tqdm>=4.66
+matplotlib>=3.8
+
+# --- required to run the notebooks ---
+ipykernel>=6.29
+notebook>=7.0
+jupyterlab>=4.0
+
+# Exact versions this pipeline was last verified against (2026-08-24):
+#   numpy 2.2.6          scipy 1.15.3         pandas 2.2.3
+#   tifffile 2025.5.21   Pillow 11.2.1        pyvista 0.45.2 (vtk 9.4.2)
+#   tqdm 4.67.1          matplotlib 3.10.3
+#   ipykernel 6.29.5     notebook 7.6.2       jupyterlab 4.6.3
