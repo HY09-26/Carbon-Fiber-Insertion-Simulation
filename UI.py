@@ -3,19 +3,19 @@ UI.py
 =====
 Small Tkinter front-end for a SINGLE insertion.
 
-Pick a .tif volume, choose one of the five modelled probes (or type your own
-dimensions), and run one insertion at a chosen (x, y).  It reports the
+Pick a .tif volume, choose one of the modelled probes (or type your own
+dimensions), and run one insertion at a chosen (x, y). It reports the
 intersected vessel-voxel count and opens the 3-D view.
 
-This is an exploration tool.  The numbers that go into the paper come from
+This is an exploration tool. The numbers that go into the paper come from
 `All_Simulation.ipynb`, which sweeps 100 insertion sites across every animal.
 
 Run it with:
 
     python UI.py
 
-Dimensions are entered as RADII in micrometres; they are doubled to diameters
-before being handed to the simulation functions, which work in diameters.
+All dimensions are DIAMETERS in micrometres, matching the specification table
+in README.md and the simulation functions, so nothing is converted anywhere.
 """
 
 import tkinter as tk
@@ -23,42 +23,37 @@ from tkinter import filedialog, messagebox, ttk
 import tifffile as tiff
 import numpy as np
 
+from model_3D_visualization import visualize_cone_pyvista, cropping_img
+from Volume_bleeding import simulate_cone_insertion, find_first_black_pixel_slice
 
-# Importing functions from another file
-# NOTE: the historical version also imported the same two names from
-# `Area_UI`, which the `Volume_bleeding` import below then shadowed.
-# `Area_UI` is now a deprecated re-export of `Volume_bleeding`, so that
-# redundant line has been removed.
-from model_3D_visualization import visualize_cone_pyvista, calculate_cone_radius, cropping_img
-from Volume_bleeding import simulate_cone_insertion, find_first_black_pixel_slice, process_cone_positions
-
-## Default Electrodes
-# Manufacturer dimensions, in micrometres. "tip" is the deepest segment,
-# "shank" the part nearer the cortical surface; both taper linearly from
-# radius_start to radius_end. Shank + tip length is 1000 um for every probe.
-preset_configs = {
+# Probe presets, in micrometres. "shank" is the segment nearer the cortical
+# surface, "tip" the deepest one; each tapers linearly from base to top.
+# Shank + tip length is 1000 um for every probe.
+PRESETS = {
     "Custom (Manual)": {},
-    "Carbon Fiber (8.4um)": {
-        "tip_length": 160, "tip_radius_start": 3.4, "tip_radius_end": 0,
-        "shank_length": 840, "shank_radius_start": 4.2, "shank_radius_end": 4.2
-    },
-    "Paradromics Connexus (20um)": {
-        "tip_length": 125, "tip_radius_start": 10, "tip_radius_end": 0,
-        "shank_length": 875, "shank_radius_start": 10, "shank_radius_end": 10
-    },
-    "Microprobes FMA (25um)": {
-        "tip_length": 28.09, "tip_radius_start": 12.5, "tip_radius_end": 0,
-        "shank_length": 971.91, "shank_radius_start": 12.5, "shank_radius_end": 12.5
-    },
-    "Neuralink Shuttle (25um)": {
-        "tip_length": 10, "tip_radius_start": 12.5, "tip_radius_end": 12.5,
-        "shank_length": 990, "shank_radius_start": 12.5, "shank_radius_end": 12.5
-    },
-    "Blackrock UEA (90um)": {
-        "tip_length": 50, "tip_radius_start": 14, "tip_radius_end": 1.5,
-        "shank_length": 950, "shank_radius_start": 45, "shank_radius_end": 14
-    }
+    "Carbon Fiber": dict(shank_length=840,    shank_base_d=8.4, shank_top_d=8.4,
+                         tip_length=160,      tip_base_d=6.8,   tip_top_d=0.0),
+    "Microprobes FMA": dict(shank_length=971.91, shank_base_d=25.0, shank_top_d=25.0,
+                            tip_length=28.09,    tip_base_d=25.0,   tip_top_d=0.0),
+    "Shuttle": dict(shank_length=990,        shank_base_d=25.0, shank_top_d=25.0,
+                    tip_length=10,           tip_base_d=25.0,   tip_top_d=25.0),
+    "Blackrock UEA": dict(shank_length=950,  shank_base_d=90.0, shank_top_d=28.0,
+                          tip_length=50,     tip_base_d=28.0,   tip_top_d=3.0),
 }
+
+# Field label -> preset key. Order here is the order shown in the window.
+FIELDS = [
+    ("Shank Length",        "shank_length"),
+    ("Shank Base Diameter", "shank_base_d"),
+    ("Shank Top Diameter",  "shank_top_d"),
+    ("Tip Length",          "tip_length"),
+    ("Tip Base Diameter",   "tip_base_d"),
+    ("Tip Top Diameter",    "tip_top_d"),
+]
+
+CROP_MARGIN_X = 80        # half-width of the rendered slab along x, in voxels
+CROP_MARGIN_Y = 50        # half-width along y; 50 fills the 100-voxel slab
+DEPTH_LIMIT = 1000        # insertion depth, in voxels
 
 
 def run_gui():
@@ -67,94 +62,58 @@ def run_gui():
 
     def browse_file():
         """File picker for the .tif volume."""
-        file_path = filedialog.askopenfilename(filetypes=[("TIFF files", "*.tif *.tiff")])
+        path = filedialog.askopenfilename(filetypes=[("TIFF files", "*.tif *.tiff")])
         entry_file.delete(0, tk.END)
-        entry_file.insert(0, file_path)
+        entry_file.insert(0, path)
 
     def apply_preset(event=None):
         """Fill the dimension fields from the selected probe preset."""
-        selection = electrode_combo.get()
-        config = preset_configs.get(selection, {})
-        if config:
-            entry_tip_length.delete(0, tk.END)
-            entry_tip_length.insert(0, str(config["tip_length"]))
-            entry_tip_radius_start.delete(0, tk.END)
-            entry_tip_radius_start.insert(0, str(config["tip_radius_start"]))
-            entry_tip_radius_end.delete(0, tk.END)
-            entry_tip_radius_end.insert(0, str(config["tip_radius_end"]))
-            entry_shank_length.delete(0, tk.END)
-            entry_shank_length.insert(0, str(config["shank_length"]))
-            entry_shank_radius_start.delete(0, tk.END)
-            entry_shank_radius_start.insert(0, str(config["shank_radius_start"]))
-            entry_shank_radius_end.delete(0, tk.END)
-            entry_shank_radius_end.insert(0, str(config["shank_radius_end"]))
+        config = PRESETS.get(probe_combo.get(), {})
+        for (_, key), entry in zip(FIELDS, entries):
+            if key in config:
+                entry.delete(0, tk.END)
+                entry.insert(0, str(config[key]))
 
     def run_simulation():
         """Load the volume, run one insertion, report the count, show the 3-D view."""
         try:
-            filepath = entry_file.get()
-            img_data = tiff.imread(filepath)
             # (z, y, x) as stored on disk -> (z, x, y) as the simulation expects.
-            img_data = np.transpose(img_data, axes=(0, 2, 1))
-            img_data = img_data.astype(np.uint16)
-
+            img_data = tiff.imread(entry_file.get())
+            img_data = np.transpose(img_data, axes=(0, 2, 1)).astype(np.uint16)
             print(img_data.shape)
 
-            tip_length = float(entry_tip_length.get())
-            tip_radius_start = float(entry_tip_radius_start.get())
-            tip_radius_end = float(entry_tip_radius_end.get())
-            shank_length = float(entry_shank_length.get())
-            shank_radius_start = float(entry_shank_radius_start.get())
-            shank_radius_end = float(entry_shank_radius_end.get())
+            geom = {key: float(entry.get()) for (_, key), entry in zip(FIELDS, entries)}
             x_center = int(entry_x.get())
             y_center = int(entry_y.get())
 
-            # === Find the starting slice ===
             start_slice = find_first_black_pixel_slice(img_data, x_center, y_center)
 
-            # Radii are doubled because the simulation takes diameters.
             result = simulate_cone_insertion(
                 img_data, x_center, y_center,
-                shank_length, shank_radius_start * 2, shank_radius_end * 2,
-                tip_length, tip_radius_start * 2, tip_radius_end * 2,
-                start_slice, 1000
-            )
+                geom["shank_length"], geom["shank_base_d"], geom["shank_top_d"],
+                geom["tip_length"], geom["tip_base_d"], geom["tip_top_d"],
+                start_slice, DEPTH_LIMIT)
 
+            # Crop to a slab around the insertion so the renderer stays responsive.
+            cropped, cx, cy = cropping_img(img_data, x_center, y_center,
+                                           CROP_MARGIN_X, CROP_MARGIN_Y, start_slice)
 
-            # === Cropping ===
-            # Same slab as model_3D_visualization.cropping_img, inlined here.
-            # TODO: call cropping_img() instead, so the crop logic lives in one place.
-            crop_margin_x = 80
-            crop_margin_y = 50
-            x_min = max(x_center - crop_margin_x , 0)
-            x_max = min(x_center + crop_margin_x , img_data.shape[1])
-            y_min = y_center - crop_margin_y
-            y_max = y_center + crop_margin_y
-            cropped_img_data = img_data[start_slice:start_slice+1000, x_min:x_max, y_min:y_max]  # shape: [depth, H, W]
-
-
-            # ===  the cone's center to match the cropped region ===
-            adjusted_x_center = crop_margin_x
-            adjusted_y_center = crop_margin_y
-
-
-            # === Visualize using the cropped data ===
             visualize_cone_pyvista(
-                cropped_img_data, adjusted_x_center, adjusted_y_center, shank_length=shank_length,
-                shank_base_diameter=shank_radius_start * 2, shank_top_diameter=shank_radius_end * 2,
-                tip_length=tip_length, tip_base_diameter=tip_radius_start * 2, tip_top_diameter=tip_radius_end * 2,
-                start_slice=start_slice, depth_limit=1000, ui=1
-            )
+                cropped, cx, cy,
+                shank_length=geom["shank_length"],
+                shank_base_diameter=geom["shank_base_d"],
+                shank_top_diameter=geom["shank_top_d"],
+                tip_length=geom["tip_length"],
+                tip_base_diameter=geom["tip_base_d"],
+                tip_top_diameter=geom["tip_top_d"],
+                start_slice=start_slice, depth_limit=DEPTH_LIMIT, ui=1)
 
             messagebox.showinfo("Result", f"Total vessel voxels intersected: {int(result)}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-
-
-
     window = tk.Tk()
-    window.title("Visualization:Electrode Insertion Simulation ")
+    window.title("Electrode Insertion Simulation")
 
     # File input
     tk.Label(window, text="Load File").grid(row=0, column=0)
@@ -162,37 +121,34 @@ def run_gui():
     entry_file.grid(row=0, column=1)
     tk.Button(window, text="Browse", command=browse_file).grid(row=0, column=2)
 
-    # Electrode Preset Dropdown
+    # Probe preset dropdown
     tk.Label(window, text="Preset Electrode").grid(row=1, column=0)
-    electrode_combo = ttk.Combobox(window, values=list(preset_configs.keys()), state="readonly")
-    electrode_combo.current(0)  # Default to "Custom"
-    electrode_combo.grid(row=1, column=1)
-    electrode_combo.bind("<<ComboboxSelected>>", apply_preset)
+    probe_combo = ttk.Combobox(window, values=list(PRESETS), state="readonly")
+    probe_combo.current(0)                       # default to "Custom (Manual)"
+    probe_combo.grid(row=1, column=1)
+    probe_combo.bind("<<ComboboxSelected>>", apply_preset)
 
-    # Parameter input (all lengths and radii in micrometres)
-    labels = [
-        "Tip Length", "Tip Radius Start", "Tip Radius End",
-        "Shank Length", "Shank Radius Start", "Shank Radius End",
-        "X Center", "Y Center"
-    ]
+    # Geometry fields, all in micrometres
     entries = []
-    for i, label in enumerate(labels):
-        tk.Label(window, text=label).grid(row=i+2, column=0)
+    for i, (label, _) in enumerate(FIELDS):
+        tk.Label(window, text=f"{label} (um)").grid(row=i + 2, column=0)
         entry = tk.Entry(window)
-        entry.grid(row=i+2, column=1)
+        entry.grid(row=i + 2, column=1)
         entries.append(entry)
 
-    # Unpack in the same order as `labels` above.
-    (
-        entry_tip_length, entry_tip_radius_start, entry_tip_radius_end,
-        entry_shank_length, entry_shank_radius_start, entry_shank_radius_end,
-        entry_x, entry_y
-    ) = entries
+    # Insertion site
+    row = len(FIELDS) + 2
+    tk.Label(window, text="X Center").grid(row=row, column=0)
+    entry_x = tk.Entry(window)
+    entry_x.grid(row=row, column=1)
+    tk.Label(window, text="Y Center").grid(row=row + 1, column=0)
+    entry_y = tk.Entry(window)
+    entry_y.grid(row=row + 1, column=1)
 
-    # Simulation button
-    tk.Button(window, text="Run Simulation", command=run_simulation).grid(row=len(labels)+3, column=1)
+    tk.Button(window, text="Run Simulation", command=run_simulation).grid(row=row + 3, column=1)
 
     window.mainloop()
+
 
 if __name__ == "__main__":
     run_gui()

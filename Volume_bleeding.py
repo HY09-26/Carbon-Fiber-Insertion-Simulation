@@ -30,8 +30,9 @@ Voxel values are binary: 1 = vessel (or space above the cortical surface),
 0 = non-vascular tissue.  All lengths and diameters are in micrometres,
 which equals voxels because the sampling is 1 um isotropic.
 
-`Area_UI.py` re-exports everything defined here; prefer importing this module
-directly.
+This module is the single source of truth for the probe geometry.
+`Number_bleeding.py` and `model_3D_visualization.py` import `create_cone_mask`
+and `calculate_cone_radius` from here rather than defining their own.
 """
 
 import numpy as np

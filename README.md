@@ -7,13 +7,16 @@ less vascular damage than the larger commercial arrays.
 
 Probes compared:
 
-| Probe | Shank length / diameter (um) | Tip length / diameter (um) | Total (um) |
-|---|---|---|---|
-| Carbon Fiber | 840 / 8.4 | 160 / 6.8 -> 0 | 1000 |
-| Paradromics Connexus | 875 / 20 | 125 / 20 -> 0 | 1000 |
-| Microprobes FMA | 971.91 / 25 | 28.09 / 25 -> 0 | 1000 |
-| Neuralink Shuttle | 990 / 25 | 10 / 25 (flat) | 1000 |
-| Blackrock UEA | 950 / 90 -> 28 | 50 / 28 -> 3 | 1000 |
+| Probe | Key | Shank length / diameter (um) | Tip length / diameter (um) | Total (um) |
+|---|---|---|---|---|
+| Carbon Fiber 10 um | `CF` | 840 / 8.4 | 160 / 6.8 -> 0 | 1000 |
+| Microprobes FMA | `FMA` | 971.91 / 25 | 28.09 / 25 -> 0 | 1000 |
+| Shuttle 25 um | `Shuttle` | 990 / 25 | 10 / 25 (flat) | 1000 |
+| Blackrock UEA | `UEA` | 950 / 90 -> 28 | 50 / 28 -> 3 | 1000 |
+
+The **Key** column is the short name used in output filenames and as the
+dictionary key in `ELECTRODES`; the full name is carried alongside it as
+`label`, for figures and tables.
 
 Each probe is modelled as two stacked conical frusta: a **shank** near the
 cortical surface and a **tip** at depth, both tapering linearly. The insertion
@@ -131,23 +134,24 @@ kernel picker. Entries that do not exist on your machine are ignored.
 
 ### 1. `All_Simulation.ipynb` - main results
 
+Four cells, run top to bottom.
+
 | Cell | What it does |
 |---|---|
 | 0 | Imports; builds `tiff_files` from `mouse_data/` (8 animals) |
-| 1 | All parameters: insertion site, crop margins, `pos_num = 100`, `depth_limit = 1000`, and the five probe geometries |
-| 2 | Segments every volume into connected components and caches the result in `seg_cache/*.npz`. Skipped automatically if the cache exists |
-| 3-7 | One cell per probe (UEA, Neuralink, FMA, Paradromics, Carbon Fiber). Each runs both metrics over all 8 animals, writes two CSVs, and renders one 3-D figure per animal |
+| 1 | Every parameter in one place: insertion site, crop margins, `pos_num = 100`, `depth_limit = 1000`, and the four probe geometries in `ELECTRODES` |
+| 2 | Segments every volume into connected components and caches it in `seg_cache/*.npz`. Skipped automatically when the cache exists |
+| 3 | Loops over all four probes and all eight animals: both metrics, two CSVs per probe, one 3-D figure per probe per animal |
 
-Cells 3-7 are five copies of the same code differing only in
-`selected_electrode`. Folding them into a loop is the obvious cleanup but has
-been left alone to avoid changing behaviour.
+To add or remove a probe, edit `ELECTRODES` in cell 1. Nothing else needs
+changing - cell 3 iterates over whatever is in there.
 
 **Runtime**, measured on an Apple-silicon laptop:
 
 - loading one volume: ~2 s (3.0 GB resident)
 - loading one cached segmentation: ~5 s (6.0 GB resident)
 - ~0.5 s per insertion per metric
-- one probe across 8 animals: **~13 min**; all five probes: **~1 hour**, plus
+- one probe across 8 animals: **~13 min**; all four probes: **~50 min**, plus
   3-D rendering
 - the first run also pays for segmentation, which is not cached yet
 
@@ -165,12 +169,11 @@ Expect **several hours**: 20 diameters x 100 sites x 8 animals x 2 metrics.
 python UI.py
 ```
 
-Pick a tif, choose a probe preset (or type custom dimensions), set an
+Pick a tif, choose a probe preset (or type your own dimensions), set an
 insertion site, and get the vessel-voxel count plus the 3-D view. Exploration
 tool only - the paper's numbers come from the notebooks.
 
-Note that the GUI takes **radii**, while the underlying functions take
-**diameters**; the conversion happens inside `run_simulation`.
+All dimensions in the GUI are diameters, the same as everywhere else.
 
 ---
 
@@ -178,8 +181,9 @@ Note that the GUI takes **radii**, while the underlying functions take
 
 ```
 output_csv/
-  Volume_<Probe>.csv    columns: file, position, overlap_area
-  Number_<Probe>.csv    columns: file, position, overlap_number
+  Volume_<Key>.csv      columns: file, position, overlap_area
+  Number_<Key>.csv      columns: file, position, overlap_number
+                        <Key> is CF / FMA / Shuttle / UEA
                         1 row per (animal, insertion site) = 800 rows
 
 Volume_bleeding_per_diameter/
@@ -189,7 +193,7 @@ Number_bleeding_per_diameter/
                         1 row per insertion site = 100 rows
 
 output_images/
-  <Probe>_<animal>.tif  3-D render, 300 dpi
+  <Key>_<animal>.tif    3-D render, 300 dpi
                         gold = vessels outside the probe
                         red  = vessels inside the probe
                         grey = the probe
@@ -210,12 +214,11 @@ single-voxel components dropped by the `min_size=2` filter.
 ## Code guide
 
 ```
-Volume_bleeding.py           volume metric  (core)
+Volume_bleeding.py           volume metric + shared geometry (core)
 Number_bleeding.py           count metric + segmentation (core)
 model_3D_visualization.py    3-D rendering
-Area_UI.py                   deprecated shim -> Volume_bleeding
 UI.py                        Tkinter GUI for a single insertion
-All_Simulation.ipynb         main pipeline, 5 probes x 8 animals
+All_Simulation.ipynb         main pipeline, 4 probes x 8 animals
 Bleeding_per_diameter.ipynb  cylinder control sweep
 ```
 
@@ -245,31 +248,30 @@ The count metric, plus the segmentation that makes it possible.
 | `process_cone_positions_num(...)` | The `pos_num`-site loop for the count metric. Takes the **label image**, not the raw binary volume. |
 | `get_top_n_labels`, `visualize_labeled_3d` | Debug helpers for eyeballing the segmentation. |
 
-Note that this module also imports `calculate_cone_radius` and
-`find_first_black_pixel_slice` from elsewhere and then re-defines both. The
-local definitions win. The only difference is that the local
-`find_first_black_pixel_slice` returns 0 instead of `None` for a column that
-never reaches background.
+`create_cone_mask` and `calculate_cone_radius` are imported from
+`Volume_bleeding` rather than redefined, so there is one implementation of
+each. `find_first_black_pixel_slice` is the one exception: this module keeps
+its own, which returns 0 instead of `None` for a column that never reaches
+background, so the caller always gets a usable index.
+
+Importing this module does not pull in PyVista. Only `visualize_labeled_3d`
+needs it, and it imports it on call, so the metrics run without VTK.
 
 ### `model_3D_visualization.py`
+
+Geometry helpers come from `Volume_bleeding`; this module only adds the crop
+and the renderer.
 
 | Function | Purpose |
 |---|---|
 | `cropping_img(...)` | Cuts a slab around the insertion (default 160 x 100 x 1000) so the renderer stays responsive, and re-expresses the insertion centre in cropped coordinates. |
 | `visualize_cone_pyvista(...)` | Builds a scalar field (1 = vessel outside probe, 2 = vessel inside), thresholds each into a mesh, adds a 36-gon wireframe cone for the probe, a bounding box and a 100 um scale bar. `ui=1` opens an interactive window; `ui=0` returns the plotter for a headless `.screenshot()`. Key bindings: `s` screenshot, `r` reset camera. |
 
-### `Area_UI.py`
-
-Deprecated. It used to hold a second copy of the volume-metric code, identical
-to `Volume_bleeding.py` apart from one progress `print`. It now re-exports
-from `Volume_bleeding` so the algorithm lives in one place. Import
-`Volume_bleeding` directly in new code.
-
 ### `UI.py`
 
 Tkinter GUI described under [Running the pipeline](#running-the-pipeline).
-It inlines its own copy of the crop logic instead of calling `cropping_img`;
-there is a `TODO` on that line.
+Calls `cropping_img` for the render crop, and takes diameters throughout, so
+it shares both the geometry and the crop logic with the pipeline.
 
 ---
 
@@ -313,10 +315,11 @@ environment from `environment.yml` rather than reusing a system Python.
 
 ## Conventions
 
-- All lengths, diameters and radii are in **micrometres**, which equals voxels
-  at this 1 um isotropic sampling.
-- The simulation functions take **diameters**; the GUI takes **radii** and
-  doubles them.
+- All lengths and diameters are in **micrometres**, which equals voxels at
+  this 1 um isotropic sampling.
+- Everything takes **diameters** - the `ELECTRODES` config, the simulation
+  functions and the GUI alike. Nothing converts between radius and diameter
+  anywhere.
 - Volumes must be transposed to `(z, x, y)` with
   `np.transpose(img, axes=(0, 2, 1))` before being passed to any function here.
 - The whole repository is ASCII-only. The micrometre unit is written `um`, not

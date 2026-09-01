@@ -20,6 +20,9 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore", message="Failed to use notebook backend")
 
+# Single source of truth for the probe geometry.
+from Volume_bleeding import calculate_cone_radius
+
 
 # Function to crop______________________________________________________________________________________________________________________________________________________________
 def cropping_img(img_data, x_center, y_center, crop_margin_x, crop_margin_y, start_slice):
@@ -63,22 +66,6 @@ def cropping_img(img_data, x_center, y_center, crop_margin_x, crop_margin_y, sta
     return cropped_img_data, adjusted_x_center, adjusted_y_center
 
 
-# Function to calculate radius for a cone at a given depth_________________________________________________________________________________________________________________________
-def calculate_cone_radius(depth, base_diameter, top_diameter, total_length):
-    """Radius of a linearly tapering segment; see Volume_bleeding for details."""
-    slope = (top_diameter - base_diameter) / total_length
-    radius = base_diameter / 2 + slope * depth / 2
-    return radius
-
-
-# Function to find the first slice where the center pixel is 0______________________________________________________________________________________________________________________
-def find_first_black_pixel_slice(img_data, x_center, y_center):
-    """Cortical surface depth under (x_center, y_center); see Volume_bleeding."""
-    depth, height, width = img_data.shape
-    for z in range(depth):
-        if img_data[z, x_center, y_center] == 0:
-            return z
-    return None  # If no slice with a black pixel is found
 
 
 # Function to visualize_______________________________________________________________________________________________________________________________________________________________
