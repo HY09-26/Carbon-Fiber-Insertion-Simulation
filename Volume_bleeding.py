@@ -19,8 +19,8 @@ of vessel voxels inside that circle is summed over all slices.
 
 Input volume convention
 -----------------------
-`img_data` must have shape (depth, height, width) = (z, x, y) after the
-caller has applied `np.transpose(raw_tif, axes=(0, 2, 1))`, i.e.
+Load volumes with `load_volume`, which returns shape (depth, height, width)
+= (z, x, y):
 
     z (depth)  : 0 .. 2999   depth into the tissue, 1 um per slice
     x (height) : 0 .. 4999   medial-lateral axis, 1 um per voxel
@@ -30,12 +30,27 @@ Voxel values are binary: 1 = vessel (or space above the cortical surface),
 0 = non-vascular tissue.  All lengths and diameters are in micrometres,
 which equals voxels because the sampling is 1 um isotropic.
 
-This module is the single source of truth for the probe geometry.
-`Number_bleeding.py` and `model_3D_visualization.py` import `create_cone_mask`
-and `calculate_cone_radius` from here rather than defining their own.
+This module is the single source of truth for the probe geometry and for the
+volume layout. `Number_bleeding.py` and `model_3D_visualization.py` import
+from here rather than defining their own.
 """
 
 import numpy as np
+
+
+def load_volume(path):
+    """Read one binary vasculature stack in the (z, x, y) layout used everywhere.
+
+    The tif is stored as (z, y, x); every function in this project expects
+    (z, x, y), so this is the one place the transpose happens.
+
+    Returns
+    -------
+    ndarray of uint16, shape (depth, height, width) = (z, x, y)
+    """
+    import tifffile
+
+    return np.transpose(tifffile.imread(path), axes=(0, 2, 1)).astype(np.uint16)
 
 
 def create_cone_mask(height, width, x_center, y_center, radius):

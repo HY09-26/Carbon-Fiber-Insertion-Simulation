@@ -15,7 +15,7 @@
 # not work (pyvista 0.44 against VTK 9.7 fails with "cannot import name
 # vtkCapsuleSource"). pyvista and vtk are therefore pinned to a series that is
 # known to work together, and pandas is capped below 3.0, which is a breaking
-# release. Exact versions live in requirements-lock.txt.
+# release. The exact versions last verified are listed in requirements.txt.
 name: cf_v2
 channels:
   - conda-forge

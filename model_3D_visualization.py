@@ -3,7 +3,7 @@ model_3D_visualization.py
 =========================
 3-D rendering of one probe insertion, using PyVista.
 
-Produces the figures saved into `output_images/`: the vasculature around the
+Produces the figures saved into `results/figures/`: the vasculature around the
 insertion site, with the vessels that fall inside the probe highlighted.
 
     gold   vessels outside the probe
@@ -24,7 +24,6 @@ warnings.filterwarnings("ignore", message="Failed to use notebook backend")
 from Volume_bleeding import calculate_cone_radius
 
 
-# Function to crop______________________________________________________________________________________________________________________________________________________________
 def cropping_img(img_data, x_center, y_center, crop_margin_x, crop_margin_y, start_slice):
     """Cut a slab around the insertion site so the renderer stays responsive.
 
@@ -56,7 +55,7 @@ def cropping_img(img_data, x_center, y_center, crop_margin_x, crop_margin_y, sta
     x_min = max(x_center - crop_margin_x , 0)
     x_max = min(x_center + crop_margin_x , img_data.shape[1])
     y_min = y_center - crop_margin_y
-    y_max = y_center + crop_margin_y 
+    y_max = y_center + crop_margin_y
     cropped_img_data = img_data[start_slice:start_slice+1000, x_min:x_max, y_min:y_max]  # shape: [depth, H, W]
 
     # Adjust the cone's center to match the cropped region
@@ -66,11 +65,8 @@ def cropping_img(img_data, x_center, y_center, crop_margin_x, crop_margin_y, sta
     return cropped_img_data, adjusted_x_center, adjusted_y_center
 
 
-
-
-# Function to visualize_______________________________________________________________________________________________________________________________________________________________
-def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_base_diameter, 
-                                          shank_top_diameter, tip_length, tip_base_diameter, tip_top_diameter, 
+def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_base_diameter,
+                                          shank_top_diameter, tip_length, tip_base_diameter, tip_top_diameter,
                                           start_slice, depth_limit, ui):
     """Render the cropped slab with the probe and the vessels it intersects.
 
@@ -102,15 +98,12 @@ def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_bas
     pyvista.Plotter
         The populated plotter, shown already if ui == 1.
     """
-    import numpy as np
-    import pyvista as pv
-
     depth, height, width = img_data.shape
     img_data = np.transpose(img_data, (1, 2, 0))  # Reorder axes for PyVista (Y, X, Z)
 
     # --- Build cone mask ---
     inside_cone_mask = np.zeros_like(img_data, dtype=bool)
-    
+
     # The crop already starts at the cortical surface, so depth is relative.
     start_slice = 0
     for z in range(start_slice, min(start_slice + depth_limit, depth)):
@@ -145,10 +138,9 @@ def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_bas
     grid.origin = (0, 0, 0)
     grid.point_data["values"] = scalar_field.flatten(order="F")
 
-    # Realistic: use isosurface to show vessels
-    vessel_threshold = 0.5
-    vessel_surface = grid.threshold(value=1, scalars="values")  # Extract vessels
-    vessel_inside_surface = grid.threshold(value=1.5, scalars="values")  # Extract inside cone
+    # threshold() keeps whole voxels, so vessels render as 1 um cubes.
+    vessel_surface = grid.threshold(value=1, scalars="values")           # all vessels
+    vessel_inside_surface = grid.threshold(value=1.5, scalars="values")  # vessels inside the probe
 
     plotter.add_mesh(vessel_surface, color="#FFD700", opacity=0.5, name="vessels_outside")  # Outside cone: gold
     plotter.add_mesh(vessel_inside_surface, color="red", opacity=0.9, name="vessels_inside")  # Inside cone: red
@@ -210,15 +202,11 @@ def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_bas
         ['Electrode', 'gray']
     ])
 
-    
-
-    # Screenshoot
     def save_screenshot():
         """Key "s": write the current view to screenshot.png."""
         plotter.screenshot("screenshot.png")
         print("Screenshot saved as screenshot.png")
 
-    # Reset Camera
     def reset_camera():
         """Key "r": restore the default viewing angle."""
         plotter.camera_position = 'xz'
@@ -227,10 +215,8 @@ def visualize_cone_pyvista(img_data, x_center, y_center, shank_length, shank_bas
         plotter.reset_camera()
         print("Camera reset.")
 
-
     plotter.add_key_event("s", save_screenshot)
     plotter.add_key_event("r", reset_camera)
-    
 
     if ui == 1:
         # auto_close=False keeps the render window usable after show() returns.
