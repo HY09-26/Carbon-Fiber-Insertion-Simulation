@@ -6,7 +6,7 @@ thin carbon-fibre electrodes cause less vascular damage than commercial arrays.
 
 | Probe | Key | Shank length / diameter (um) | Tip length / diameter (um) | Total (um) |
 |---|---|---|---|---|
-| Carbon Fiber 10 um | `CF` | 840 / 8.4 | 160 / 6.8 -> 0 | 1000 |
+| Carbon Fiber 10 um | `CF` | 840 / 9.6 | 160 / 6.8 -> 0 | 1000 |
 | Microprobes FMA | `FMA` | 971.91 / 25 | 28.09 / 25 -> 0 | 1000 |
 | Shuttle 25 um | `Shuttle` | 990 / 25 | 10 / 25 (flat) | 1000 |
 | Blackrock UEA | `UEA` | 950 / 90 -> 28 | 50 / 28 -> 3 | 1000 |

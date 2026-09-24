@@ -37,7 +37,7 @@ DEPTH_LIMIT = 1000     # insertion depth
 # its base to its top diameter. Keys are used in output filenames.
 ELECTRODES = {
     "CF": dict(label="Carbon Fiber 10 um",
-               shank_length=840,     shank_base_d=8.4,  shank_top_d=8.4,
+               shank_length=840,     shank_base_d=9.6,  shank_top_d=9.6,
                tip_length=160,       tip_base_d=6.8,    tip_top_d=0.0),
     "FMA": dict(label="Microprobes FMA",
                 shank_length=971.91, shank_base_d=25.0, shank_top_d=25.0,
